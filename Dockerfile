@@ -80,4 +80,3 @@ USER app
 WORKDIR /app
 
 COPY --from=dependencies $PYSETUP_PATH $PYSETUP_PATH
-COPY --from=dependencies /usr/local/bin/dumb-init /usr/local/bin/supercronic /usr/local/bin/
