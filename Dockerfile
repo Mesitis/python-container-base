@@ -27,7 +27,10 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     #
     #
-    DUMB_INIT_VERSION=1.2.4
+    #
+    SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.1/supercronic-linux-amd64 \
+    SUPERCRONIC=supercronic-linux-amd64 \
+    SUPERCRONIC_SHA1SUM=d7f4c0886eb85249ad05ed592902fa6865bb9d70
 
 
 RUN groupadd --gid 1000 app \
@@ -35,8 +38,13 @@ RUN groupadd --gid 1000 app \
     && mkdir -p /app \
     && chown app:app /app \
     && apt-get update \
-    && apt-get install --no-install-recommends -y logrotate nano procps curl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install --no-install-recommends -y logrotate dumb-init nano procps curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSLO "$SUPERCRONIC_URL" \
+    && echo "${SUPERCRONIC_SHA1SUM} ${SUPERCRONIC}" | sha1sum -c - \
+    && chmod +x "$SUPERCRONIC" \
+    && mv "$SUPERCRONIC" "/usr/local/bin/${SUPERCRONIC}" \
+    && ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic
 
 # prepend poetry and venv to path
 ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
@@ -53,17 +61,23 @@ RUN apt-get update \
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
 RUN curl -sSL https://install.python-poetry.org | python
 
-ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.1/supercronic-linux-amd64 \
-    SUPERCRONIC=supercronic-linux-amd64 \
-    SUPERCRONIC_SHA1SUM=d7f4c0886eb85249ad05ed592902fa6865bb9d70
+COPY scripts /scripts
+
+FROM builder AS dependencies
+
+WORKDIR $PYSETUP_PATH
+COPY poetry.lock pyproject.toml ./
+
+ARG ARTIFACT_USERNAME=aws
+ARG ARTIFACT_PASSWORD
 
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
-RUN curl -L -o /usr/local/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_x86_64 \
-    && chmod +x /usr/local/bin/dumb-init \
-    && curl -fsSLO "$SUPERCRONIC_URL" \
-    && echo "${SUPERCRONIC_SHA1SUM} ${SUPERCRONIC}" | sha1sum -c - \
-    && chmod +x "$SUPERCRONIC" \
-    && mv "$SUPERCRONIC" "/usr/local/bin/${SUPERCRONIC}" \
-    && ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic
+RUN /scripts/install-dependencies.sh
 
-COPY scripts /scripts
+FROM base AS app
+
+USER app
+WORKDIR /app
+
+COPY --from=dependencies $PYSETUP_PATH $PYSETUP_PATH
+COPY --from=dependencies /usr/local/bin/dumb-init /usr/local/bin/supercronic /usr/local/bin/

@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "python-container-base"
+version = "0.1.0"
+description = ""
+authors = ["Canopy Pte Ltd <hello@canopy.cloud>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+canopy-toolkit = { extras = ["psycopg2", "asyncpg", "crypto", "queue", "logging", "cache-redis", "api", "jwt"], version = "~1.3.11", source = "artifact" }
+cryptography = "38.0.1"
+boto3 = "^1.25.0"
+
+[[tool.poetry.source]]
+name = "artifact"
+url = "https://canopy-221120163160.d.codeartifact.ap-southeast-1.amazonaws.com/pypi/canopy/simple/"
+secondary = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

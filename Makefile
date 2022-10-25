@@ -1,5 +1,6 @@
+artifact-login:
+	@poetry config http-basic.artifact aws $(shell aws codeartifact get-authorization-token --region ap-southeast-1 --domain canopy --domain-owner 221120163160 --query authorizationToken --output text)
+
 build:
-	docker build --target base -t 221120163160.dkr.ecr.ap-southeast-1.amazonaws.com/python:3.9-slim .
-	docker build --target builder -t 221120163160.dkr.ecr.ap-southeast-1.amazonaws.com/python:3.9-slim-builder .
-	docker push 221120163160.dkr.ecr.ap-southeast-1.amazonaws.com/python:3.9-slim
-	docker push 221120163160.dkr.ecr.ap-southeast-1.amazonaws.com/python:3.9-slim-builder
+	IMAGE_TAG_PREFIX=221120163160.dkr.ecr.ap-southeast-1.amazonaws.com/python ./scripts/build-docker.sh
+
